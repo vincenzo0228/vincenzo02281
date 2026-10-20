@@ -1,0 +1,1203 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style><title>PrintPoint</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a sticky 3D printer stage on the left, services + order form on the right; stacks on phones. */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-2: #e8ecf1;
+  --fg: #0e1620;
+  --muted: #556171;
+  --line: #d3d9e1;
+  --cyan: #0089c2;
+  --magenta: #d4146c;
+  --yellow: #e8a900;
+  --accent: #d4146c;
+  --accent-fg: #ffffff;
+  --accent-soft: #fbe6f0;
+  --ok: #157a4d;
+  --warn: #b45309;
+  --danger: #b3261e;
+  --stage-top: #1e2836;
+  --stage-bottom: #0d131c;
+  --stage-fg: #eaf0f6;
+  --stage-muted: #9fb0c4;
+  --stage-line: rgba(255, 255, 255, 0.07);
+  --paper: #fcfcfa;
+  --paper-ink: #10151c;
+  --paper-muted: #5d6773;
+  --paper-line: #aeb6c0;
+  --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1017;
+    --surface: #131a24;
+    --surface-2: #1b2431;
+    --fg: #e8eef5;
+    --muted: #98a6b8;
+    --line: #263244;
+    --cyan: #3ab8ee;
+    --magenta: #ff4d9a;
+    --yellow: #ffcf33;
+    --accent: #ff4d9a;
+    --accent-fg: #1b0610;
+    --accent-soft: #2b1322;
+    --ok: #4cd08d;
+    --warn: #f2a33a;
+    --danger: #ff8a80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1017;
+  --surface: #131a24;
+  --surface-2: #1b2431;
+  --fg: #e8eef5;
+  --muted: #98a6b8;
+  --line: #263244;
+  --cyan: #3ab8ee;
+  --magenta: #ff4d9a;
+  --yellow: #ffcf33;
+  --accent: #ff4d9a;
+  --accent-fg: #1b0610;
+  --accent-soft: #2b1322;
+  --ok: #4cd08d;
+  --warn: #f2a33a;
+  --danger: #ff8a80;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+}
+h1, h2, h3, p { margin: 0; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; }
+button, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+
+.page {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 14px 48px;
+}
+
+/* header */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 6px 18px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
+.reg { display: grid; grid-template-columns: repeat(2, 11px); gap: 2px; }
+.reg i { width: 11px; height: 11px; display: block; }
+.reg i:nth-child(1) { background: var(--cyan); }
+.reg i:nth-child(2) { background: var(--magenta); }
+.reg i:nth-child(3) { background: var(--yellow); }
+.reg i:nth-child(4) { background: var(--fg); }
+.brand-name { font-family: var(--font-display); font-weight: 800; font-size: 1.45rem; letter-spacing: -0.02em; }
+.jump { font-size: 0.9rem; color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--line); padding-bottom: 1px; }
+.jump:hover { color: var(--fg); }
+
+.intro { display: grid; gap: 10px; max-width: 760px; padding-bottom: 22px; }
+.intro h1 { font-size: clamp(1.9rem, 5vw, 3.2rem); line-height: 1.04; font-weight: 750; letter-spacing: -0.025em; }
+.intro p { color: var(--muted); font-size: 1.05rem; max-width: 62ch; }
+
+/* layout */
+.layout { display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr); }
+.stage-col { min-width: 0; }
+.content { min-width: 0; display: grid; gap: 30px; align-content: start; }
+@media (min-width: 1000px) {
+  .layout { grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+  .stage-wrap { position: sticky; top: 16px; }
+  .stage { height: clamp(440px, 72vh, 640px); }
+}
+
+/* 3D stage */
+.stage-wrap { scroll-margin-top: 12px; }
+.stage {
+  position: relative;
+  height: clamp(330px, 84vw, 460px);
+  border-radius: 22px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(80, 120, 170, 0.28), transparent 60%),
+    linear-gradient(var(--stage-top), var(--stage-bottom));
+  color: var(--stage-fg);
+  isolation: isolate;
+}
+.stage::before {
+  content: "";
+  position: absolute; inset: 0; z-index: -1;
+  background-image:
+    linear-gradient(var(--stage-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--stage-line) 1px, transparent 1px);
+  background-size: 34px 34px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 35%, #000);
+  mask-image: linear-gradient(to bottom, transparent, #000 35%, #000);
+}
+#gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: grab; }
+.chip {
+  position: absolute; top: 14px; left: 14px;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px 6px 10px; border-radius: 999px;
+  background: rgba(8, 12, 18, 0.62); border: 1px solid rgba(255, 255, 255, 0.12);
+  font: 600 0.78rem/1 var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase;
+}
+.chip i { width: 9px; height: 9px; border-radius: 50%; background: #35e08a; box-shadow: 0 0 10px #35e08a; }
+.chip[data-mode="busy"] i { background: #ffb02e; box-shadow: 0 0 10px #ffb02e; }
+.chip[data-mode="done"] i { background: #4cc9ff; box-shadow: 0 0 10px #4cc9ff; }
+.hint { position: absolute; top: 18px; right: 14px; font-size: 0.78rem; color: var(--stage-muted); text-align: right; max-width: 45%; }
+.tools { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 8px; }
+.tools button {
+  background: rgba(8, 12, 18, 0.62); color: var(--stage-fg);
+  border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 10px;
+  padding: 8px 12px; font-size: 0.82rem; cursor: pointer; min-height: 40px;
+}
+.tools button:hover { background: rgba(255, 255, 255, 0.14); }
+.regmark { position: absolute; left: 14px; bottom: 14px; width: 30px; height: 30px; opacity: 0.55; }
+.no3d-msg { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; padding: 28px; text-align: center; color: var(--stage-muted); }
+.stage.no3d .no3d-msg { display: flex; }
+.stage.no3d #gl, .stage.no3d .tools, .stage.no3d .hint { display: none; }
+
+/* sections */
+.sec-head { display: grid; gap: 4px; margin-bottom: 14px; }
+.sec-head h2 { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.015em; }
+.sec-head p { color: var(--muted); font-size: 0.92rem; }
+
+.svc-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); }
+.svc {
+  display: grid; gap: 8px; align-content: space-between;
+  background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; padding: 14px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.svc.on { border-color: var(--accent); background: var(--accent-soft); }
+.svc-top { display: flex; align-items: center; gap: 9px; }
+.swatch { width: 12px; height: 12px; flex: none; }
+.svc h3 { font-size: 1.02rem; font-weight: 650; line-height: 1.2; }
+.svc-note { color: var(--muted); font-size: 0.85rem; line-height: 1.4; }
+.svc-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.price { font-family: var(--font-mono); font-weight: 600; font-size: 0.92rem; font-variant-numeric: tabular-nums; }
+.price small { color: var(--muted); font-weight: 400; font-size: 0.78rem; }
+.stepper { display: inline-flex; align-items: center; border: 1.5px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.stepper button {
+  width: 40px; height: 40px; border: 0; background: transparent; cursor: pointer; font-size: 1.2rem; line-height: 1;
+}
+.stepper button:hover { background: var(--surface-2); }
+.stepper input {
+  width: 52px; height: 40px; border: 0; border-inline: 1.5px solid var(--line); background: transparent; text-align: center;
+  font-family: var(--font-mono); font-weight: 600; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield;
+}
+.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* form */
+form { display: grid; gap: 18px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 18px; padding: 18px; }
+.fields { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.field { display: grid; gap: 6px; min-width: 0; }
+label, legend { font-size: 0.82rem; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
+input[type="text"], input[type="tel"], textarea {
+  width: 100%; min-width: 0; padding: 11px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--fg);
+}
+textarea { resize: vertical; min-height: 64px; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.75; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 8px; }
+legend { padding: 0; margin-bottom: 8px; }
+.choice-row { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.tile {
+  position: relative; display: grid; gap: 2px; padding: 11px 12px; border-radius: 12px; cursor: pointer;
+  border: 1.5px solid var(--line); background: var(--bg); min-width: 0;
+}
+.tile input { position: absolute; opacity: 0; inset: 0; cursor: pointer; margin: 0; }
+.tile .t-name { font-weight: 650; font-size: 0.95rem; }
+.tile .t-sub { font-size: 0.78rem; color: var(--muted); }
+.tile.is-on { border-color: var(--accent); background: var(--accent-soft); }
+.tile:focus-within { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.paynote { font-size: 0.82rem; color: var(--muted); }
+
+.summary { border-top: 1.5px dashed var(--line); padding-top: 14px; display: grid; gap: 8px; }
+.summary h3 { font-size: 1rem; font-weight: 650; }
+.summary ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.summary li { display: flex; justify-content: space-between; gap: 12px; font-size: 0.92rem; }
+.summary li span:last-child { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.summary .empty { color: var(--muted); }
+.total { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-top: 8px; border-top: 1.5px solid var(--line); }
+.total span { font-weight: 600; }
+.total strong { font-family: var(--font-display); font-size: 1.8rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.formmsg { min-height: 1.3em; font-size: 0.9rem; color: var(--danger); font-weight: 600; }
+.submit {
+  background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 13px; padding: 16px 18px; cursor: pointer;
+  font-family: var(--font-display); font-weight: 650; font-size: 1.1rem; letter-spacing: -0.005em; min-height: 54px;
+}
+.submit:hover { filter: brightness(1.06); }
+.submit:disabled { opacity: 0.65; cursor: progress; }
+
+/* slip card */
+.slipcard { display: grid; gap: 16px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 18px; padding: 18px; scroll-margin-top: 12px; }
+@media (prefers-reduced-motion: no-preference) {
+  .slipcard { animation: rise 0.45s ease-out both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+}
+.slip-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.slip-head h2 { font-size: 1.35rem; font-weight: 700; }
+.refchip { font-family: var(--font-mono); font-weight: 600; font-size: 0.85rem; padding: 5px 10px; border-radius: 8px; background: var(--surface-2); }
+.receipt {
+  background: var(--paper); color: var(--paper-ink); border-radius: 6px; padding: 16px; font-family: var(--font-mono); font-size: 0.84rem;
+  display: grid; gap: 8px; border-top: 8px solid; border-image: linear-gradient(90deg, #00a6e6 25%, #e4007c 25% 50%, #ffd600 50% 75%, #14181f 75%) 1;
+}
+.receipt .r { display: flex; justify-content: space-between; gap: 12px; }
+.receipt .r span:first-child { color: var(--paper-muted); }
+.receipt .r span:last-child { text-align: right; overflow-wrap: anywhere; }
+.receipt hr { border: 0; border-top: 2px dashed var(--paper-line); margin: 4px 0; width: 100%; }
+.receipt .big { font-weight: 600; font-size: 1.05rem; }
+.send { display: grid; gap: 10px; }
+.send h3, .pay h3 { font-size: 1.05rem; font-weight: 650; }
+.row { display: grid; grid-template-columns: 78px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--bg); }
+.row .lab { font-size: 0.78rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.row .val { font-family: var(--font-mono); font-weight: 600; font-size: 0.92rem; overflow-wrap: anywhere; user-select: all; }
+.copy {
+  border: 1.5px solid var(--line); background: var(--surface); border-radius: 9px; padding: 7px 12px; cursor: pointer; font-size: 0.82rem; font-weight: 600; min-height: 36px;
+}
+.copy:hover { background: var(--surface-2); }
+.openlink { font-size: 0.85rem; color: var(--cyan); }
+.pay { display: grid; gap: 10px; padding: 14px; border-radius: 14px; background: var(--surface-2); }
+.pay ol { margin: 0; padding-left: 1.2rem; display: grid; gap: 4px; font-size: 0.9rem; color: var(--muted); }
+.pay .amt { font-family: var(--font-display); font-weight: 750; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.pay .row { background: var(--surface); }
+
+
+/* how it works */
+.how { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); max-width: 1000px; }
+.how li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; padding: 12px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); line-height: 1.3; }
+.how .n { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-mono); font-weight: 600; font-size: 0.85rem; background: var(--surface-2); color: var(--muted); }
+.how b { display: block; font-family: var(--font-display); font-size: 1rem; font-weight: 650; }
+.how .d { color: var(--muted); font-size: 0.82rem; }
+.how li.now { border-color: var(--accent); }
+.how li.now .n { background: var(--accent); color: var(--accent-fg); }
+.how li.done .n { background: var(--ok); color: var(--bg); }
+
+/* printing banner on the stage */
+.banner { position: absolute; top: 58px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 28px); padding: 10px 18px; border-radius: 12px; text-align: center; background: rgba(8, 12, 18, 0.82); border: 1px solid rgba(255, 255, 255, 0.2); font: 600 0.95rem/1.3 var(--font-mono); color: var(--stage-fg); opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.banner.show { opacity: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .banner.busy { animation: bpulse 0.9s ease-in-out infinite alternate; }
+  @keyframes bpulse { from { opacity: 1; } to { opacity: 0.55; } }
+}
+
+/* next steps tracker */
+.prog-text { font-size: 0.88rem; color: var(--muted); font-weight: 600; }
+.progress { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0; background: var(--ok); transition: width 0.3s; }
+.steps { display: grid; gap: 12px; }
+.stp { display: grid; gap: 10px; padding: 14px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--bg); }
+.stp.ok { border-color: var(--ok); }
+.stp-head { display: flex; align-items: center; gap: 10px; }
+.stp-head h3 { font-size: 1.05rem; font-weight: 650; }
+.stp-head .n { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-mono); font-weight: 600; font-size: 0.85rem; background: var(--surface-2); color: var(--muted); }
+.stp.ok .n { background: var(--ok); color: var(--bg); }
+.stp .amt { font-family: var(--font-display); font-weight: 750; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.chk { display: inline-flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer; min-height: 40px; }
+.chk input { width: 22px; height: 22px; accent-color: var(--accent); }
+.done-msg { padding: 12px 14px; border-radius: 12px; background: var(--surface-2); font-weight: 600; }
+.newbtn { justify-self: start; border: 1.5px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 14px; cursor: pointer; font-weight: 600; min-height: 42px; }
+.newbtn:hover { background: var(--surface-2); }
+
+.notify { padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: 0.9rem; font-weight: 600; }
+.notify.ok { color: var(--ok); }
+.notify.bad { color: var(--danger); }
+.payref { display: grid; gap: 8px; }
+.drop { position: relative; display: grid; gap: 4px; justify-items: center; text-align: center; padding: 22px 16px; border: 2px dashed var(--line); border-radius: 14px; background: var(--bg); cursor: pointer; }
+.drop b { font-family: var(--font-display); font-size: 1.05rem; font-weight: 650; }
+.drop span { font-size: 0.85rem; color: var(--muted); }
+.drop input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.drop:focus-within { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.flist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.flist li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--bg); }
+.flist .fn { overflow-wrap: anywhere; font-weight: 600; font-size: 0.9rem; }
+.flist .fs { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); }
+.filemsg { min-height: 1.2em; font-size: 0.88rem; }
+.filemsg.bad { color: var(--danger); font-weight: 600; }
+footer { margin-top: 36px; padding-top: 22px; border-top: 1.5px solid var(--line); display: grid; gap: 14px; }
+footer h2 { font-size: 1.15rem; font-weight: 700; }
+footer .rows { display: grid; gap: 10px; max-width: 640px; }
+.setup-note { font-size: 0.82rem; color: var(--warn); font-weight: 600; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 420px) {
+  .row { grid-template-columns: minmax(0, 1fr) auto; }
+  .row .lab { grid-column: 1 / -1; }
+  .hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+</style>
+
+</head><body>
+<div class="page">
+  <header class="top">
+    <a class="brand" href="#top"><span class="reg" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="brand-name" id="brandName">PrintPoint</span></a>
+    <a class="jump" href="#order">Go to order form</a>
+  </header>
+
+  <section class="intro" id="top">
+    <h1>Order your prints online. Get the slip.</h1>
+    <p>Choose what to print, add your details, then press submit. The printer prints your receipt with our Facebook page, number and Gmail, and shows you what to do next.</p>
+    <ol class="how" id="how">
+      <li><span class="n">1</span><div><b>Choose what to print</b><span class="d">Black &amp; white, colour or photo.</span></div></li>
+      <li><span class="n">2</span><div><b>Add your details</b><span class="d">Name, contact, your file and how you will pay.</span></div></li>
+      <li><span class="n">3</span><div><b>Press submit</b><span class="d">The printer prints your receipt.</span></div></li>
+      <li><span class="n">4</span><div><b>Pay and send your file</b><span class="d">Follow the steps on your receipt.</span></div></li>
+    </ol>
+  </section>
+
+  <main class="layout">
+    <div class="stage-col" id="stageCol">
+      <div class="stage-wrap" id="stageWrap">
+        <div class="stage" id="stage">
+          <canvas id="gl" role="img" aria-label="Interactive 3D printer. Drag to turn it, tap the lid to open it."></canvas>
+          <div class="chip" id="chip" data-mode="idle"><i></i><span id="chipText">Ready</span></div>
+          <div class="banner" id="banner" role="status"></div>
+          <div class="hint">Drag to turn the printer. Tap the lid to open it.</div>
+          <svg class="regmark" viewBox="0 0 30 30" fill="none" stroke="#eaf0f6" stroke-width="1.4" aria-hidden="true"><circle cx="15" cy="15" r="8"/><path d="M15 1v28M1 15h28"/></svg>
+          <div class="tools">
+            <button type="button" id="lidBtn">Open lid</button>
+            <button type="button" id="viewBtn">Reset view</button>
+          </div>
+          <div class="no3d-msg"><p>The 3D printer could not start on this device. You can still order, and your receipt will appear below the stage when you submit.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <article class="slipcard" id="slipCard" hidden aria-live="polite"></article>
+
+      <section aria-labelledby="svcH">
+        <div class="sec-head">
+          <h2 id="svcH">Step 1. Choose what to print</h2>
+          <p>Type how many pages or photos you need. Prices shown are samples and can be changed by the shop.</p>
+        </div>
+        <div class="svc-grid" id="svcGrid"></div>
+      </section>
+
+      <section id="order" aria-labelledby="ordH">
+        <div class="sec-head">
+          <h2 id="ordH">Step 2. Your details</h2>
+          <p>Add your name, contact and how you will pay. Nothing is charged on this page.</p>
+        </div>
+        <form id="orderForm" novalidate>
+          <div class="fields">
+            <div class="field"><label for="custName">Your name</label><input type="text" id="custName" autocomplete="name" maxlength="60" placeholder="Juan Dela Cruz"></div>
+            <div class="field"><label for="custContact">Mobile number or Facebook name</label><input type="text" id="custContact" autocomplete="tel" maxlength="60" placeholder="09XX XXX XXXX"></div>
+          </div>
+
+          <fieldset>
+            <legend>Paper size</legend>
+            <div class="choice-row" id="paperRow">
+              <label class="tile is-on"><input type="radio" name="paper" value="Short (8.5 x 11 in)" checked><span class="t-name">Short</span><span class="t-sub">8.5 × 11 in</span></label>
+              <label class="tile"><input type="radio" name="paper" value="A4 (8.3 x 11.7 in)"><span class="t-name">A4</span><span class="t-sub">8.3 × 11.7 in</span></label>
+              <label class="tile"><input type="radio" name="paper" value="Long (8.5 x 13 in)"><span class="t-name">Long</span><span class="t-sub">8.5 × 13 in</span></label>
+            </div>
+          </fieldset>
+
+          <div class="field"><label for="custNotes">Notes (optional)</label><textarea id="custNotes" rows="2" maxlength="200" placeholder="Pages 3 to 10 only, double-sided, staple at the corner"></textarea></div>
+
+          <fieldset>
+            <legend>How will you pay?</legend>
+            <div class="choice-row" id="payRow"></div>
+          </fieldset>
+          <p class="paynote">Payment goes straight to the shop's account. This page never asks for card numbers or passwords.</p>
+
+          <fieldset id="fileSec" hidden>
+            <legend>Attach your file (optional)</legend>
+            <label class="drop" id="dropZone" for="fileInput">
+              <input type="file" id="fileInput" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.heic">
+              <b>Tap to choose your files</b>
+              <span>or drop them here. PDF, Word, PowerPoint, Excel or photos. Up to 5 files, 9 MB in total.</span>
+            </label>
+            <ul class="flist" id="fileList"></ul>
+            <p class="filemsg" id="fileMsg" role="status"></p>
+            <p class="paynote">Your files go straight to the shop. You can also send them later using the steps on your receipt.</p>
+          </fieldset>
+
+          <div class="summary">
+            <h3>Summary</h3>
+            <ul id="sumList"></ul>
+            <div class="total"><span>Total</span><strong id="sumTotal">₱0.00</strong></div>
+          </div>
+
+          <p class="paynote"><b>Step 3.</b> Press the button. Your receipt prints on the printer at the top of the page.</p>
+          <p class="formmsg" id="formMsg" role="alert"></p>
+          <button class="submit" id="submitBtn" type="submit">Submit order &amp; print receipt</button>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <h2>Where to send your file</h2>
+    <div class="rows" id="footRows"></div>
+    <p class="setup-note" id="setupNote" hidden>These contact and payment details are placeholders. Replace them in the SHOP block at the top of the page script.</p>
+  </footer>
+</div>
+<div class="sr" id="sr" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ================= SHOP DETAILS (edit these) ================= */
+  var SHOP = {
+    name: 'PrintPoint',
+    prefix: 'PP',
+    fbText: 'Ace Vincent A. Laureta',
+    fbUrl: '',                       // e.g. 'https://www.facebook.com/yourpage' makes an Open page link
+    phone: '09506505282',
+    email: 'lauretaace54@gmail.com',
+    hours: 'Mon to Sat, 8:00 AM to 7:00 PM',
+    placeholder: false,               // set to false once real details are in
+    notify: { key: '', url: 'https://api.web3forms.com/submit', discordUrl: 'https://discord.com/api/webhooks/1561908585313607775/AWnXabKitfNMmNYBLRlQm7URRUzUZjWD9-WbRHRip07smP0cSgE375Z7tOXHgtCEzZmt' },   // Web3Forms key = orders by email; discordUrl = orders in your Discord channel
+    pay: {
+      gcash: { label: 'GCash', sub: 'Send to our number', number: '09506505282', holder: 'Ace Vincent A. Laureta' },
+      maya:  { label: 'Maya', sub: 'Send to our number', number: '09506505282', holder: 'Ace Vincent A. Laureta' },
+      cash:  { label: 'Cash on pickup', sub: 'Pay when you collect', number: '', holder: '' }
+    }
+  };
+
+  var SERVICES = [
+    { id: 'bw',    name: 'Black & white print', short: 'B&W print',    unit: 'page',  price: 2,  note: 'Documents and school work on bond paper.', swatch: 'fg' },
+    { id: 'color', name: 'Full-colour print',   short: 'Colour print', unit: 'page',  price: 10, note: 'Reports, slides and flyers in colour.',     swatch: 'magenta' },
+    { id: 'photo', name: 'Photo print (4R)',    short: 'Photo 4R',     unit: 'photo', price: 15, note: 'Glossy 4 × 6 in photo paper.',             swatch: 'cyan' },
+  ];
+
+  var state = { qty: { bw: 10 }, pay: 'gcash' };
+  var flow = { printed: false, finished: false };
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  function money(n) { return '₱' + Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function plainMoney(n) { return 'PHP ' + Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function shortPrice(n) { return '₱' + (n % 1 ? n.toFixed(2) : n); }
+  function announce(t) { $('sr').textContent = ''; setTimeout(function () { $('sr').textContent = t; }, 30); }
+
+  /* ---------- stage chip ---------- */
+  var bannerTimer = null;
+  function setBanner(text, mode) {
+    var b = $('banner'); clearTimeout(bannerTimer);
+    if (!text) { b.className = 'banner'; return; }
+    b.textContent = text; b.className = 'banner show' + (mode === 'busy' ? ' busy' : '');
+  }
+  function setChip(text, mode) {
+    $('chipText').textContent = text; $('chip').setAttribute('data-mode', mode || 'idle');
+    if (mode === 'busy') setBanner('Printing receipt…', 'busy');
+    else if (mode === 'done') { setBanner('Receipt printed. Your next steps are below.', 'done'); bannerTimer = setTimeout(function () { setBanner(''); }, 5000); }
+    else setBanner('');
+  }
+
+  /* ---------- copy helper ---------- */
+  function copyText(text, node, btn) {
+    var done = function (ok) { btn.textContent = ok ? 'Copied' : 'Selected'; setTimeout(function () { btn.textContent = 'Copy'; }, 1800); };
+    var fallback = function () {
+      try { var r = document.createRange(); r.selectNodeContents(node); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); } catch (e) {}
+      done(false);
+    };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(function () { done(true); }, fallback); }
+      else { fallback(); }
+    } catch (e) { fallback(); }
+  }
+  function copyRow(label, value, extra) {
+    var row = el('div', 'row');
+    row.appendChild(el('span', 'lab', label));
+    var val = el('span', 'val', value);
+    var holder = el('div');
+    holder.style.minWidth = '0';
+    holder.appendChild(val);
+    if (extra) holder.appendChild(extra);
+    row.appendChild(holder);
+    var b = el('button', 'copy', 'Copy');
+    b.type = 'button';
+    b.addEventListener('click', function () { copyText(value, val, b); });
+    row.appendChild(b);
+    return row;
+  }
+  function fbExtra() {
+    if (!SHOP.fbUrl) return null;
+    var a = el('a', 'openlink', 'Open page');
+    a.href = SHOP.fbUrl; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    return a;
+  }
+  function contactRows(container) {
+    container.appendChild(copyRow('Facebook', SHOP.fbText, fbExtra()));
+    container.appendChild(copyRow('Number', SHOP.phone));
+    container.appendChild(copyRow('Gmail', SHOP.email));
+  }
+
+  /* ---------- services UI ---------- */
+  function renderServices() {
+    $('svcGrid').innerHTML = SERVICES.map(function (s) {
+      return '<div class="svc" id="svc-' + s.id + '" data-id="' + s.id + '">' +
+        '<div class="svc-top"><span class="swatch" style="background:var(--' + s.swatch + ')"></span><h3>' + s.name + '</h3></div>' +
+        '<p class="svc-note">' + s.note + '</p>' +
+        '<div class="svc-bottom"><span class="price">' + shortPrice(s.price) + ' <small>/ ' + s.unit + '</small></span>' +
+        '<div class="stepper" role="group" aria-label="' + s.name + ' quantity">' +
+        '<button type="button" data-act="dec" aria-label="Fewer ' + s.name + '">−</button>' +
+        '<input type="text" inputmode="numeric" pattern="[0-9]*" id="q-' + s.id + '" value="0" maxlength="3" aria-label="' + s.name + ' quantity">' +
+        '<button type="button" data-act="inc" aria-label="More ' + s.name + '">+</button>' +
+        '</div></div></div>';
+    }).join('');
+  }
+  function setQty(id, q) {
+    q = Math.max(0, Math.min(999, q | 0));
+    if (q) state.qty[id] = q; else delete state.qty[id];
+    refresh();
+  }
+  function refresh() {
+    SERVICES.forEach(function (s) {
+      var q = state.qty[s.id] || 0;
+      var input = $('q-' + s.id);
+      if (document.activeElement !== input) input.value = q;
+      $('svc-' + s.id).classList.toggle('on', q > 0);
+    });
+    var list = $('sumList'); list.innerHTML = '';
+    var total = 0, count = 0;
+    SERVICES.forEach(function (s) {
+      var q = state.qty[s.id] || 0;
+      if (!q) return;
+      count++; total += q * s.price;
+      var li = el('li');
+      li.appendChild(el('span', null, q + ' × ' + s.name));
+      li.appendChild(el('span', null, money(q * s.price)));
+      list.appendChild(li);
+    });
+    if (!count) { var e = el('li', 'empty', 'Nothing selected yet. Add a service above.'); list.appendChild(e); }
+    $('sumTotal').textContent = money(total);
+    updateHow();
+  }
+  $('svcGrid').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-act]'); if (!b) return;
+    var id = b.closest('.svc').getAttribute('data-id');
+    var q = state.qty[id] || 0;
+    setQty(id, b.getAttribute('data-act') === 'inc' ? q + 1 : q - 1);
+  });
+  $('svcGrid').addEventListener('input', function (e) {
+    var inp = e.target; if (!inp.id || inp.id.indexOf('q-') !== 0) return;
+    var digits = inp.value.replace(/[^0-9]/g, '');
+    inp.value = digits;
+    setQty(inp.id.slice(2), parseInt(digits || '0', 10));
+  });
+  $('svcGrid').addEventListener('focusout', function () { refresh(); });
+
+  /* ---------- payment tiles ---------- */
+  function renderPay() {
+    var row = $('payRow'); row.innerHTML = '';
+    Object.keys(SHOP.pay).forEach(function (k, i) {
+      var p = SHOP.pay[k];
+      var lab = el('label', 'tile' + (k === state.pay ? ' is-on' : ''));
+      var inp = el('input'); inp.type = 'radio'; inp.name = 'pay'; inp.value = k; if (k === state.pay) inp.checked = true;
+      lab.appendChild(inp); lab.appendChild(el('span', 't-name', p.label)); lab.appendChild(el('span', 't-sub', p.sub));
+      row.appendChild(lab);
+    });
+  }
+  function bindTiles(row, onChange) {
+    row.addEventListener('change', function (e) {
+      if (e.target.type !== 'radio') return;
+      Array.prototype.forEach.call(row.querySelectorAll('.tile'), function (t) { t.classList.toggle('is-on', t.querySelector('input').checked); });
+      if (onChange) onChange(e.target.value);
+    });
+  }
+  bindTiles($('payRow'), function (v) { state.pay = v; });
+  bindTiles($('paperRow'));
+
+  /* ================= 3D PRINTER ================= */
+  var fontsReady = (document.fonts && document.fonts.load)
+    ? Promise.all([
+        document.fonts.load('800 36px "Bricolage Grotesque"'),
+        document.fonts.load('400 16px "JetBrains Mono"'),
+        document.fonts.load('600 16px "JetBrains Mono"')
+      ]).catch(function () {})
+    : Promise.resolve();
+
+  var FD = '"Bricolage Grotesque", "Segoe UI", sans-serif';
+  var FM = '"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace';
+
+  function drawSlip(canvas, order) {
+    var g = canvas.getContext('2d'), W = canvas.width, H = canvas.height, P = 32, y;
+    var INK = '#10151c', MUT = '#5d6773', LINE = '#aeb6c0';
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = '#fcfcfa'; g.fillRect(0, 0, W, H);
+    ['#00a6e6', '#e4007c', '#ffd600', '#14181f'].forEach(function (c, i) { g.fillStyle = c; g.fillRect(i * W / 4, 0, W / 4, 12); });
+    g.textBaseline = 'alphabetic';
+    function dash(yy) { g.save(); g.strokeStyle = LINE; g.lineWidth = 2; g.setLineDash([7, 6]); g.beginPath(); g.moveTo(P, yy); g.lineTo(W - P, yy); g.stroke(); g.restore(); }
+    function txt(s, x, yy, font, color, align) { g.font = font; g.fillStyle = color; g.textAlign = align || 'left'; g.fillText(s, x, yy); }
+    function fit(s, font, maxW) { g.font = font; var t = s; while (t.length > 3 && g.measureText(t).width > maxW) t = t.slice(0, -2); return t === s ? s : t.replace(/\s+$/, '') + '…'; }
+
+    txt(SHOP.name, P, 94, '800 38px ' + FD, INK);
+    txt('PRINT ORDER RECEIPT', P, 118, '600 15px ' + FM, MUT);
+    dash(132);
+    y = 156;
+    [['REF', order.ref], ['DATE', order.date], ['NAME', order.name], ['PAPER', order.paper]].forEach(function (r) {
+      txt(r[0], P, y, '400 15px ' + FM, MUT);
+      txt(fit(r[1], '600 16px ' + FM, W - 2 * P - 92), P + 92, y, '600 16px ' + FM, INK);
+      y += 24;
+    });
+    dash(y - 8); y += 18;
+    var shown = order.items.slice(0, 4);
+    shown.forEach(function (it) {
+      txt(fit(it.qty + ' x ' + it.short, '400 16px ' + FM, W - 2 * P - 130), P, y, '400 16px ' + FM, INK);
+      txt(it.sub.toFixed(2), W - P, y, '400 16px ' + FM, INK, 'right');
+      y += 24;
+    });
+    if (order.items.length > shown.length) { txt('+ ' + (order.items.length - shown.length) + ' more item(s)', P, y, '400 15px ' + FM, MUT); y += 24; }
+    dash(y - 8); y += 22;
+    txt('TOTAL', P, y, '600 20px ' + FM, INK);
+    txt(plainMoney(order.total), W - P, y, '600 22px ' + FM, INK, 'right');
+    y += 26;
+    txt('PAY VIA ' + order.payLabel.toUpperCase(), P, y, '400 15px ' + FM, MUT);
+    y += 16; dash(y); y += 14;
+
+    g.fillStyle = INK; g.fillRect(P, y, W - 2 * P, 32);
+    txt('SEND YOUR FILE TO', P + 12, y + 22, '600 16px ' + FM, '#ffffff');
+    y += 32 + 26;
+    [['FACEBOOK (SEARCH NAME)', SHOP.fbText], ['CALL / TEXT', SHOP.phone], ['GMAIL', SHOP.email]].forEach(function (r) {
+      txt(r[0], P, y, '400 13px ' + FM, MUT);
+      txt(fit(r[1], '600 21px ' + FM, W - 2 * P), P, y + 24, '600 21px ' + FM, INK);
+      y += 52;
+    });
+    txt('NEXT: 1 Pay  2 Send file  3 Wait for reply', P, y, '400 14px ' + FM, MUT);
+    txt('Put ' + order.ref + ' in your message.', P, y + 19, '600 14px ' + FM, INK);
+    y += 36;
+
+    /* barcode derived from the reference */
+    var units = [], i, k, code;
+    for (i = 0; i < order.ref.length; i++) { code = order.ref.charCodeAt(i); for (k = 0; k < 5; k++) units.push(1 + ((code >> k) & 1) * 2); }
+    var sum = units.reduce(function (a, b) { return a + b; }, 0), bw = W - 2 * P - 80, u = bw / sum, bx = P + 40;
+    g.fillStyle = INK;
+    for (i = 0; i < units.length; i++) { if (i % 2 === 0) g.fillRect(bx, y, units[i] * u, 38); bx += units[i] * u; }
+
+    dash(H - 46);
+    ['#00a6e6', '#e4007c', '#ffd600', '#14181f'].forEach(function (c, j) { g.fillStyle = c; g.fillRect(P + j * 18, H - 30, 14, 14); });
+    txt('Thank you!', W - P, H - 18, '400 14px ' + FM, MUT, 'right');
+  }
+
+  var Printer = (function () {
+    var stub = {
+      available: false,
+      print: function () { return new Promise(function (r) { setChip('Printing receipt…', 'busy'); setTimeout(function () { setChip('Receipt printed', 'done'); r(); }, 1300); }); },
+      toggleLid: function () {}, resetView: function () {}
+    };
+    function markFallback() { $('stage').classList.add('no3d'); }
+    if (!window.THREE) { markFallback(); return stub; }
+    try { return build(); } catch (err) { if (window.console) console.error(err); markFallback(); return stub; }
+
+    function build() {
+      var T = window.THREE;
+      var stage = $('stage'), canvas = $('gl');
+      var renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.outputEncoding = T.sRGBEncoding;
+      renderer.localClippingEnabled = true;
+
+      var scene = new T.Scene();
+      var camera = new T.PerspectiveCamera(34, 1, 0.1, 60);
+      scene.add(new T.HemisphereLight(0xffffff, 0x4a5a73, 0.95));
+      var sun = new T.DirectionalLight(0xffffff, 0.85); sun.position.set(3, 7, 6); scene.add(sun);
+      var fill = new T.DirectionalLight(0x8ec9ff, 0.35); fill.position.set(-5, 2, 3); scene.add(fill);
+      var glow = new T.PointLight(0x00a6e6, 0, 4.5); glow.position.set(-0.4, 0.55, 1.7); scene.add(glow);
+
+      function mat(color, rough) { return new T.MeshStandardMaterial({ color: color, roughness: rough == null ? 0.55 : rough, metalness: 0.05 }); }
+      function box(w, h, d, m) { return new T.Mesh(new T.BoxGeometry(w, h, d), m); }
+
+      /* soft floor shadow */
+      var sc = document.createElement('canvas'); sc.width = sc.height = 128;
+      var sg = sc.getContext('2d'), grad = sg.createRadialGradient(64, 64, 4, 64, 64, 64);
+      grad.addColorStop(0, 'rgba(0,0,0,0.55)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
+      sg.fillStyle = grad; sg.fillRect(0, 0, 128, 128);
+      var shadow = new T.Mesh(new T.PlaneGeometry(7.4, 5.6), new T.MeshBasicMaterial({ map: new T.CanvasTexture(sc), transparent: true, depthWrite: false }));
+      shadow.rotation.x = -Math.PI / 2; shadow.position.set(0, -0.004, 0.7); scene.add(shadow);
+
+      var printer = new T.Group(); scene.add(printer);
+
+      var plinth = box(3.3, 0.08, 2.2, mat(0x1b2430)); plinth.position.y = 0.04; printer.add(plinth);
+      var body = box(3.4, 0.97, 2.3, mat(0xdde4ec)); body.position.y = 0.565; printer.add(body);
+
+      /* scanner lid on a back hinge */
+      var lidPivot = new T.Group(); lidPivot.position.set(0, 1.05, -1.15); printer.add(lidPivot);
+      var lidTop = mat(0xeef2f7, 0.45), lidSide = mat(0xdde4ec), lidUnder = mat(0xf7f9fb, 0.9);
+      var lid = new T.Mesh(new T.BoxGeometry(3.4, 0.2, 2.3), [lidSide, lidSide, lidTop, lidUnder, lidSide, lidSide]);
+      lid.position.set(0, 0.1, 1.15); lidPivot.add(lid);
+      var platen = box(3.0, 0.02, 2.0, mat(0x1c2b3b, 0.15)); platen.position.set(0, 1.06, 0); printer.add(platen);
+
+      /* paper input tray at the back */
+      var tray = new T.Group(); tray.position.set(0, 1.05, -1.15); tray.rotation.x = 0.9; printer.add(tray);
+      var trayPlate = box(2.2, 0.05, 1.3, mat(0xaab4c1)); trayPlate.position.set(0, 0, -0.65); tray.add(trayPlate);
+      var stack = box(2.0, 0.12, 1.15, mat(0xffffff, 0.9)); stack.position.set(0, 0.085, -0.65); tray.add(stack);
+
+      /* front: output slot, ink windows, control panel */
+      var slot = new T.Mesh(new T.PlaneGeometry(1.95, 0.11), new T.MeshBasicMaterial({ color: 0x06090d }));
+      slot.position.set(-0.4, 0.35, 1.152); printer.add(slot);
+      var lip = box(2.05, 0.05, 0.1, mat(0xc7d0db)); lip.position.set(-0.4, 0.43, 1.2); printer.add(lip);
+      var inkFrame = box(1.15, 0.42, 0.04, mat(0x1b2430)); inkFrame.position.set(-0.85, 0.8, 1.17); printer.add(inkFrame);
+      [0x00a6e6, 0xe4007c, 0xffd600, 0x20242c].forEach(function (c, i) {
+        var tank = box(0.2, 0.3, 0.05, new T.MeshStandardMaterial({ color: c, roughness: 0.3, emissive: c, emissiveIntensity: 0.18 }));
+        tank.position.set(-1.2 + i * 0.28, 0.8, 1.2); printer.add(tank);
+      });
+      var panel = box(1.0, 0.56, 0.05, mat(0x1b2430)); panel.position.set(1.0, 0.7, 1.175); printer.add(panel);
+
+      var scr = document.createElement('canvas'); scr.width = 256; scr.height = 72;
+      var screenTex = new T.CanvasTexture(scr); screenTex.encoding = T.sRGBEncoding;
+      var screen = new T.Mesh(new T.PlaneGeometry(0.84, 0.24), new T.MeshBasicMaterial({ map: screenTex }));
+      screen.position.set(1.0, 0.82, 1.203); printer.add(screen);
+      function setScreen(a, b) {
+        var g = scr.getContext('2d');
+        g.fillStyle = '#071a24'; g.fillRect(0, 0, 256, 72);
+        g.fillStyle = '#7fe3ff'; g.font = '600 24px ' + FM; g.textBaseline = 'middle'; g.fillText(a, 12, 24);
+        g.fillStyle = '#4aa6c4'; g.font = '400 18px ' + FM; g.fillText(b || '', 12, 54);
+        screenTex.needsUpdate = true;
+      }
+      var led = new T.Mesh(new T.SphereGeometry(0.045, 16, 12), new T.MeshBasicMaterial({ color: 0x35e08a }));
+      led.position.set(0.72, 0.52, 1.21); printer.add(led);
+      [0.95, 1.12, 1.29].forEach(function (x) {
+        var b = new T.Mesh(new T.CylinderGeometry(0.055, 0.055, 0.04, 16), mat(0x56637a, 0.4));
+        b.rotation.x = Math.PI / 2; b.position.set(x, 0.52, 1.205); printer.add(b);
+      });
+
+      /* output tray */
+      var outTray = box(2.15, 0.06, 2.45, mat(0xa9b3c0)); outTray.position.set(-0.4, 0.06, 2.325); printer.add(outTray);
+
+      /* the printed slip */
+      var SLIP_W = 1.5, SLIP_PX_W = 512, SLIP_PX_H = 780, SLIP_H = SLIP_W * SLIP_PX_H / SLIP_PX_W, DELTA = 0.1;
+      var slipCanvas = document.createElement('canvas'); slipCanvas.width = SLIP_PX_W; slipCanvas.height = SLIP_PX_H;
+      var sctx = slipCanvas.getContext('2d'); sctx.fillStyle = '#fcfcfa'; sctx.fillRect(0, 0, SLIP_PX_W, SLIP_PX_H);
+      var slipTex = new T.CanvasTexture(slipCanvas); slipTex.encoding = T.sRGBEncoding;
+      slipTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      var basePlane = new T.Plane(new T.Vector3(0, 0, 1), -1.15), clipPlane = new T.Plane();
+      var slip = new T.Mesh(new T.PlaneGeometry(SLIP_W, SLIP_H),
+        new T.MeshBasicMaterial({ map: slipTex, side: T.DoubleSide, clippingPlanes: [clipPlane] }));
+      slip.rotation.x = -Math.PI / 2 + DELTA; slip.visible = false; printer.add(slip);
+      function setSlip(f) {
+        var zE = 0.9 + f * 2.34;
+        var yE = 0.35 - Math.max(0, zE - 1.15) * Math.tan(DELTA);
+        var half = SLIP_H / 2;
+        slip.position.set(-0.4, yE + half * Math.sin(DELTA), zE - half * Math.cos(DELTA));
+        slip.visible = f > 0.002;
+      }
+
+      function setLed(hex) { led.material.color.setHex(hex); }
+      setScreen('READY', 'Waiting for order');
+
+      /* camera + sizing */
+      var dist = 9;
+      function resize() {
+        var w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        dist = camera.aspect < 1.25 ? 12.2 : (camera.aspect < 1.6 ? 10.2 : 9.2);
+        camera.position.set(0, dist * 0.4, dist);
+        camera.lookAt(0, 0.45, 1.25);
+        camera.updateProjectionMatrix();
+      }
+      if (window.ResizeObserver) new ResizeObserver(resize).observe(stage); else window.addEventListener('resize', resize);
+      resize();
+
+      /* interaction */
+      var userYaw = 0, yaw = 0, pitch = 0, hoverPitch = 0, lidTarget = 0, lidAngle = 0, time = 0;
+      var dragging = false, startX = 0, startYaw = 0, downX = 0, downY = 0, moved = 0;
+      var ray = new T.Raycaster(), ndc = new T.Vector2();
+      function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+      function toggleLid() { lidTarget = lidTarget === 0 ? -0.95 : 0; $('lidBtn').textContent = lidTarget === 0 ? 'Open lid' : 'Close lid'; }
+      canvas.addEventListener('pointerdown', function (e) {
+        dragging = true; startX = e.clientX; startYaw = userYaw; downX = e.clientX; downY = e.clientY; moved = 0;
+        try { canvas.setPointerCapture(e.pointerId); } catch (x) {}
+        canvas.style.cursor = 'grabbing';
+      });
+      canvas.addEventListener('pointermove', function (e) {
+        var r = canvas.getBoundingClientRect();
+        if (dragging) {
+          moved = Math.max(moved, Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY));
+          userYaw = clamp(startYaw + (e.clientX - startX) / r.width * 3.4, -1.2, 1.2);
+        }
+        hoverPitch = ((e.clientY - r.top) / r.height - 0.5) * 0.12;
+      });
+      canvas.addEventListener('pointerup', function (e) {
+        var wasDrag = moved >= 6; dragging = false; canvas.style.cursor = 'grab';
+        if (wasDrag) return;
+        var r = canvas.getBoundingClientRect();
+        ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+        ray.setFromCamera(ndc, camera);
+        if (ray.intersectObject(lid, false).length) toggleLid();
+      });
+      canvas.addEventListener('pointercancel', function () { dragging = false; canvas.style.cursor = 'grab'; });
+      canvas.addEventListener('pointerleave', function () { hoverPitch = 0; });
+      $('lidBtn').addEventListener('click', toggleLid);
+      $('viewBtn').addEventListener('click', function () { userYaw = 0; });
+
+      /* print state machine */
+      var P = { phase: 'idle', t: 0, feed: 0, from: 0 }, pending = null, DUR = 4.8, INKS = [0x00a6e6, 0xe4007c, 0xffd600];
+      function beginPrint() {
+        P.phase = 'wait';
+        fontsReady.then(function () {
+          drawSlip(slipCanvas, pending.order); slipTex.needsUpdate = true;
+          P.phase = 'print'; P.t = 0; P.feed = 0; setSlip(0);
+          setLed(0xffb02e); setChip('Printing receipt…', 'busy'); setScreen('PRINTING', '0%');
+        });
+      }
+      function finish() {
+        P.phase = 'done'; printer.position.set(0, 0, 0); glow.intensity = 0;
+        setLed(0x4cc9ff); setScreen('DONE', 'Take your receipt'); setChip('Receipt printed', 'done');
+        var r = pending.resolve; pending = null; r();
+      }
+      function stepPrint(dt) {
+        if (P.phase === 'retract') {
+          P.t += dt; var k = Math.min(1, P.t / 0.5);
+          P.feed = P.from * (1 - k * k); setSlip(P.feed);
+          if (k >= 1) { P.feed = 0; slip.visible = false; beginPrint(); }
+        } else if (P.phase === 'print') {
+          P.t += dt;
+          var p = Math.min(1, P.t / DUR), N = 14, a = 0.92, TAU = Math.PI * 2;
+          var f = clamp(p - a * Math.sin(p * N * TAU) / (N * TAU), 0, 1);
+          P.feed = f; setSlip(f);
+          if (!reduce) printer.position.set((Math.random() - 0.5) * 0.012, (Math.random() - 0.5) * 0.008, 0);
+          glow.color.setHex(INKS[Math.floor(p * 12) % 3]);
+          glow.intensity = 1.1 + 0.5 * Math.sin(P.t * 20);
+          setScreen('PRINTING', Math.round(p * 100) + '%');
+          if (p >= 1) finish();
+        }
+      }
+      function print(order) {
+        return new Promise(function (resolve) {
+          pending = { order: order, resolve: resolve };
+          setChip('Getting ready…', 'busy');
+          if (P.feed > 0.01) { P.phase = 'retract'; P.t = 0; P.from = P.feed; } else { beginPrint(); }
+        });
+      }
+
+      /* render loop, paused when off screen */
+      var running = false, last = 0;
+      function frame(now) {
+        if (!running) return;
+        var dt = Math.min(0.05, (now - last) / 1000); last = now; time += dt;
+        var idle = reduce ? 0 : Math.sin(time * 0.5) * 0.12;
+        yaw += (userYaw + idle - yaw) * Math.min(1, dt * 6);
+        pitch += (hoverPitch - pitch) * Math.min(1, dt * 5);
+        printer.rotation.y = yaw; printer.rotation.x = pitch;
+        lidAngle += (lidTarget - lidAngle) * Math.min(1, dt * 7); lidPivot.rotation.x = lidAngle;
+        stepPrint(dt);
+        printer.updateMatrixWorld(true);
+        clipPlane.copy(basePlane).applyMatrix4(printer.matrixWorld);
+        renderer.render(scene, camera);
+        requestAnimationFrame(frame);
+      }
+      function start() { if (running) return; running = true; last = performance.now(); requestAnimationFrame(frame); }
+      function stop() { running = false; }
+      if (window.IntersectionObserver) {
+        new IntersectionObserver(function (en) { if (en[0].isIntersecting) start(); else stop(); }, { threshold: 0.01 }).observe(stage);
+      } else { start(); }
+      start();
+
+      return { available: true, print: print, toggleLid: toggleLid, resetView: function () { userYaw = 0; } };
+    }
+  })();
+
+  /* ================= FILE ATTACH ================= */
+  var files = [];
+  var MAX_FILES = 5, MAX_TOTAL = 9 * 1024 * 1024, OK_EXT = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'jpg', 'jpeg', 'png', 'heic'];
+  function sizeText(b) { return b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(1) + ' MB'; }
+  function renderFiles() {
+    var ul = $('fileList'); ul.innerHTML = '';
+    files.forEach(function (f, i) {
+      var li = el('li'); li.appendChild(el('span', 'fn', f.name)); li.appendChild(el('span', 'fs', sizeText(f.size)));
+      var b = el('button', 'copy', 'Remove'); b.type = 'button'; b.setAttribute('aria-label', 'Remove ' + f.name);
+      b.addEventListener('click', function () { files.splice(i, 1); $('fileMsg').textContent = ''; renderFiles(); });
+      li.appendChild(b); ul.appendChild(li);
+    });
+  }
+  function addFiles(list) {
+    var msg = $('fileMsg'); msg.textContent = ''; msg.className = 'filemsg';
+    var total = files.reduce(function (a, f) { return a + f.size; }, 0), problems = [];
+    Array.prototype.forEach.call(list, function (f) {
+      var ext = (f.name.split('.').pop() || '').toLowerCase();
+      if (OK_EXT.indexOf(ext) < 0) { problems.push(f.name + ' is not a supported file type.'); return; }
+      if (files.length >= MAX_FILES) { problems.push('You can attach up to ' + MAX_FILES + ' files.'); return; }
+      if (total + f.size > MAX_TOTAL) { problems.push(f.name + ' is too big. The limit is ' + sizeText(MAX_TOTAL) + ' in total.'); return; }
+      files.push(f); total += f.size;
+    });
+    if (problems.length) { msg.textContent = problems[0]; msg.className = 'filemsg bad'; }
+    renderFiles();
+  }
+  $('fileInput').addEventListener('change', function (e) { addFiles(e.target.files); e.target.value = ''; });
+  var dz = $('dropZone');
+  ['dragenter', 'dragover'].forEach(function (t) { dz.addEventListener(t, function (e) { e.preventDefault(); dz.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (t) { dz.addEventListener(t, function (e) { e.preventDefault(); dz.classList.remove('over'); }); });
+  dz.addEventListener('drop', function (e) { if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files); });
+
+  /* ================= ORDER FLOW ================= */
+  function collect() {
+    var msg = $('formMsg'); msg.textContent = '';
+    var items = [], total = 0;
+    SERVICES.forEach(function (s) {
+      var q = state.qty[s.id] || 0;
+      if (q > 0) { items.push({ name: s.name, short: s.short, qty: q, unit: s.unit, price: s.price, sub: q * s.price }); total += q * s.price; }
+    });
+    var name = $('custName').value.trim(), contact = $('custContact').value.trim();
+    if (!items.length) { msg.textContent = 'Add at least one service before you submit.'; $('svcGrid').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); return null; }
+    if (!name) { msg.textContent = 'Enter your name so we can match your file to your order.'; $('custName').focus(); return null; }
+    if (!contact) { msg.textContent = 'Enter your mobile number or Facebook name so we can reach you.'; $('custContact').focus(); return null; }
+    var now = new Date();
+    var ref = SHOP.prefix + '-' + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + '-' + String(Math.floor(100 + Math.random() * 900));
+    var paperInput = document.querySelector('input[name="paper"]:checked');
+    return {
+      ref: ref,
+      date: now.toLocaleString('en-PH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      name: name, contact: contact, notes: $('custNotes').value.trim(),
+      paper: paperInput ? paperInput.value : 'Short (8.5 x 11 in)',
+      items: items, total: total, pay: state.pay, payLabel: SHOP.pay[state.pay].label,
+      fileNames: files.map(function (f) { return f.name; })
+    };
+  }
+
+  /* ---------- automatic order alerts (Web3Forms emails the shop) ---------- */
+  function notifyEnabled() { return !!(SHOP.notify && (SHOP.notify.key || SHOP.notify.discordUrl)); }
+  var notifyState = { text: '', cls: '' };
+  var currentChecks = null;
+  function setNotify(text, cls) {
+    notifyState = { text: text, cls: cls || '' };
+    var n = $('notifyStatus'); if (n) { n.textContent = text; n.className = 'notify ' + (cls || ''); }
+  }
+  function orderText(order) {
+    var t = ['Reference: ' + order.ref, 'Placed: ' + order.date, 'Name: ' + order.name, 'Contact: ' + order.contact, 'Paper: ' + order.paper, '', 'Items:'];
+    order.items.forEach(function (it) { t.push('- ' + it.qty + ' x ' + it.name + ' = ' + plainMoney(it.sub)); });
+    t.push('', 'Total: ' + plainMoney(order.total), 'Pay via: ' + order.payLabel);
+    if (order.notes) t.push('Notes: ' + order.notes);
+    if (order.fileNames && order.fileNames.length) t.push('Files: ' + order.fileNames.join(', '));
+    return t.join('\n');
+  }
+  function postDiscord(content, files) {
+    var url = SHOP.notify.discordUrl, uname = SHOP.name + ' orders', allow = { parse: [] };
+    function cut(c) { return c.length > 1900 ? c.slice(0, 1900) + '…' : c; }
+    function plain(c) {
+      return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: uname, content: cut(c), allowed_mentions: allow }) })
+        .then(function (r) { return r.ok; }).catch(function () { return false; });
+    }
+    if (!files || !files.length) return plain(content).then(function (ok) { return { ok: ok, files: false }; });
+    var fd = new FormData();
+    fd.append('payload_json', JSON.stringify({ username: uname, content: cut(content), allowed_mentions: allow }));
+    files.forEach(function (f, i) { fd.append('files[' + i + ']', f, f.name); });
+    return fetch(url, { method: 'POST', body: fd })
+      .then(function (r) { if (!r.ok) throw new Error('upload'); return { ok: true, files: true }; })
+      .catch(function () {
+        var names = files.map(function (f) { return f.name; }).join(', ');
+        return plain(content + '\n(The files could not be uploaded: ' + names + ')').then(function (ok) { return { ok: ok, files: false }; });
+      });
+  }
+  function notifyShop(subject, order, extra, files) {
+    if (!notifyEnabled()) return Promise.resolve({ skipped: true });
+    var text = (extra ? extra + '\n\n' : '') + orderText(order);
+    var jobs = [];
+    if (SHOP.notify.key) {
+      jobs.push(fetch(SHOP.notify.url, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ access_key: SHOP.notify.key, subject: subject + ' ' + order.ref, from_name: SHOP.name + ' website', name: order.name, message: text })
+      }).then(function (r) { return r.json().then(function (d) { return { ok: !!(d && d.success), files: false }; }); }).catch(function () { return { ok: false, files: false }; }));
+    }
+    if (SHOP.notify.discordUrl) jobs.push(postDiscord('**' + subject + ' ' + order.ref + '**\n' + text, files));
+    return Promise.all(jobs).then(function (res) {
+      return { ok: res.some(function (r) { return r.ok; }), files: res.some(function (r) { return r.files; }) };
+    });
+  }
+
+  var STORE_KEY = 'pp-last-order';
+  function saveOrder(order, checks) { try { localStorage.setItem(STORE_KEY, JSON.stringify({ order: order, checks: checks, saved: Date.now() })); } catch (e) {} }
+  function loadOrder() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY); if (!raw) return null;
+      var d = JSON.parse(raw);
+      if (!d || !d.order || !d.checks || Date.now() - d.saved > 7 * 864e5) return null;
+      return d;
+    } catch (e) { return null; }
+  }
+  function clearOrder() { try { localStorage.removeItem(STORE_KEY); } catch (e) {} }
+
+  function scrollToEl(node, offset) {
+    var y = node.getBoundingClientRect().top + window.pageYOffset - (offset == null ? 12 : offset);
+    window.scrollTo({ top: Math.max(0, y), behavior: reduce ? 'auto' : 'smooth' });
+  }
+
+  function updateHow() {
+    var hasItems = Object.keys(state.qty).length > 0;
+    var hasDetails = !!($('custName').value.trim() && $('custContact').value.trim());
+    var done = [hasItems, hasDetails, flow.printed, flow.finished];
+    var now = done.indexOf(false);
+    Array.prototype.forEach.call($('how').children, function (li, i) {
+      li.classList.toggle('done', done[i]);
+      li.classList.toggle('now', i === now);
+      li.querySelector('.n').textContent = done[i] ? '✓' : String(i + 1);
+    });
+  }
+
+  function showSlip(order, checks, restored) {
+    var card = $('slipCard'); card.innerHTML = ''; currentChecks = checks;
+    var head = el('div', 'slip-head');
+    head.appendChild(el('h2', null, restored ? 'Your last order' : 'Your receipt'));
+    head.appendChild(el('span', 'refchip', order.ref));
+    card.appendChild(head);
+    if (restored) card.appendChild(el('p', 'paynote', 'Saved on this device only. Tick each step when you finish it.'));
+    else if (notifyEnabled() && notifyState.text) { var ns = el('p', 'notify ' + notifyState.cls, notifyState.text); ns.id = 'notifyStatus'; ns.setAttribute('role', 'status'); card.appendChild(ns); }
+
+    var rc = el('div', 'receipt');
+    function line(a, b, cls) { var r = el('div', 'r' + (cls ? ' ' + cls : '')); r.appendChild(el('span', null, a)); r.appendChild(el('span', null, b)); rc.appendChild(r); }
+    line('Date', order.date); line('Name', order.name); line('Contact', order.contact); line('Paper', order.paper);
+    rc.appendChild(el('hr'));
+    order.items.forEach(function (it) { line(it.qty + ' × ' + it.name, money(it.sub)); });
+    if (order.notes) { rc.appendChild(el('hr')); line('Notes', order.notes); }
+    if (order.fileNames && order.fileNames.length) { if (!order.notes) rc.appendChild(el('hr')); line('Files', order.fileNames.join(', ')); }
+    rc.appendChild(el('hr'));
+    line('Total', money(order.total), 'big'); line('Pay via', order.payLabel);
+    card.appendChild(rc);
+
+    var progWrap = el('div'); progWrap.style.display = 'grid'; progWrap.style.gap = '8px';
+    var progText = el('p', 'prog-text'), bar = el('div', 'progress'), fill = el('i');
+    bar.appendChild(fill); progWrap.appendChild(progText); progWrap.appendChild(bar);
+    card.appendChild(el('h3', null, 'What to do next'));
+    card.appendChild(progWrap);
+
+    var steps = el('div', 'steps'); card.appendChild(steps);
+    var doneMsg = el('p', 'done-msg', 'All steps done. We will let you know when your prints are ready. Thank you!'); doneMsg.hidden = true;
+
+    function updateProgress() {
+      var n = (checks.pay ? 1 : 0) + (checks.send ? 1 : 0) + (checks.reply ? 1 : 0);
+      progText.textContent = n + ' of 3 steps done';
+      fill.style.width = (n / 3 * 100) + '%';
+      doneMsg.hidden = n < 3;
+      flow.finished = n === 3; updateHow();
+    }
+    function stepBlock(num, title, key, nodes, label) {
+      var s = el('div', 'stp' + (checks[key] ? ' ok' : ''));
+      var h = el('div', 'stp-head'), c = el('span', 'n', checks[key] ? '✓' : String(num));
+      h.appendChild(c); h.appendChild(el('h3', null, title)); s.appendChild(h);
+      nodes.forEach(function (nd) { s.appendChild(nd); });
+      var lb = el('label', 'chk'), cb = el('input'); cb.type = 'checkbox'; cb.checked = !!checks[key];
+      cb.id = 'chk-' + key; lb.appendChild(cb); lb.appendChild(document.createTextNode(label)); s.appendChild(lb);
+      cb.addEventListener('change', function () {
+        checks[key] = cb.checked; s.classList.toggle('ok', cb.checked); c.textContent = cb.checked ? '✓' : String(num);
+        saveOrder(order, checks); updateProgress();
+        if (key === 'send' && cb.checked && !checks.sentNote && notifyEnabled()) {
+          checks.sentNote = true; saveOrder(order, checks);
+          notifyShop('File sent', order, 'The customer says they have sent their file. Look for ' + order.ref + ' in Messenger, texts or Gmail.');
+        }
+      });
+      steps.appendChild(s);
+      return { cb: cb };
+    }
+
+    var pm = SHOP.pay[order.pay], b1 = [el('div', 'amt', money(order.total))];
+    if (order.pay === 'cash') {
+      b1.push(el('p', 'paynote', 'Pay this amount in cash when you pick up your prints. Bring your reference number.'));
+      stepBlock(1, 'Pay on pickup', 'pay', b1, 'I understand');
+    } else {
+      b1.push(copyRow('Number', pm.number));
+      b1.push(el('p', 'paynote', 'Send exactly this amount through ' + pm.label + ' to ' + pm.holder + '. Then take a screenshot of the payment.'));
+      var payCb = null;
+      if (notifyEnabled()) {
+        var pr = el('div', 'payref'), prl = el('label', null, 'Payment reference number (optional)');
+        prl.setAttribute('for', 'payRefInput');
+        var pri = el('input'); pri.type = 'text'; pri.id = 'payRefInput'; pri.maxLength = 30; pri.placeholder = 'From your payment receipt';
+        var prb = el('button', 'copy', 'Send payment details to the shop'); prb.type = 'button';
+        var prs = el('p', 'paynote');
+        prb.addEventListener('click', function () {
+          var v = pri.value.trim();
+          if (!v) { prs.textContent = 'Type the reference number from your payment receipt first.'; return; }
+          prb.disabled = true; prs.textContent = 'Sending…';
+          notifyShop('Payment sent', order, 'Payment reference number: ' + v + '\nPaid via: ' + order.payLabel + '\nAmount: ' + plainMoney(order.total)).then(function (res) {
+            prb.disabled = false;
+            if (res.ok) {
+              prs.textContent = 'Sent. The shop will check your payment.';
+              if (payCb && !payCb.checked) { payCb.checked = true; payCb.dispatchEvent(new Event('change')); }
+            } else { prs.textContent = 'Could not send. Send your payment screenshot together with your file instead.'; }
+          });
+        });
+        pr.appendChild(prl); pr.appendChild(pri); pr.appendChild(prb); pr.appendChild(prs); b1.push(pr);
+      }
+      payCb = stepBlock(1, 'Pay with ' + pm.label, 'pay', b1, 'I have paid').cb;
+    }
+
+    var sendBox = el('div', 'send'); contactRows(sendBox);
+    stepBlock(2, 'Send your file', 'send',
+      [el('p', 'paynote', 'Pick any one below. Write ' + order.ref + ' in your message and attach your file' + (order.pay === 'cash' ? '.' : ' and your payment screenshot.')), sendBox],
+      'I sent my file');
+
+    stepBlock(3, 'Wait for our reply', 'reply',
+      [el('p', 'paynote', 'We will reply to ' + order.contact + ' when your prints are ready. Open ' + SHOP.hours + '.')],
+      'The shop replied to me');
+
+    card.appendChild(doneMsg);
+    var nb = el('button', 'newbtn', 'Start a new order'); nb.type = 'button';
+    nb.addEventListener('click', function () {
+      clearOrder(); card.hidden = true; flow.printed = false; flow.finished = false; updateHow(); scrollToEl($('order'), 12);
+    });
+    card.appendChild(nb);
+    updateProgress();
+    card.hidden = false;
+    if (!restored) announce('Receipt printed. Your reference number is ' + order.ref + '. Follow the three steps below.');
+  }
+
+  var printing = false;
+  $('orderForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (printing) return;
+    var order = collect(); if (!order) return;
+    printing = true;
+    var btn = $('submitBtn'); btn.disabled = true; btn.textContent = 'Printing your receipt…';
+    $('slipCard').hidden = true;
+    scrollToEl($('stageCol'), 12);
+    var sent = null;
+    if (notifyEnabled()) { setNotify('Sending your order to the shop…', ''); sent = notifyShop('New print order', order, null, files.slice()); }
+    files = []; renderFiles(); $('fileMsg').textContent = '';
+    Printer.print(order).then(function () {
+      printing = false; btn.disabled = false; btn.textContent = 'Submit order & print receipt';
+      flow.printed = true; flow.finished = false;
+      var checks = { pay: false, send: false, reply: false };
+      saveOrder(order, checks);
+      showSlip(order, checks, false);
+      setTimeout(function () { scrollToEl($('slipCard'), 12); }, 800);
+      if (sent) sent.then(function (res) {
+        var had = order.fileNames && order.fileNames.length;
+        if (res.ok && had && !res.files) setNotify('Your order was sent, but your files could not be uploaded. Please send your file using step 2.', 'bad');
+        else if (res.ok) setNotify((had ? 'Your order and files were sent' : 'Your order was sent') + ' to the shop automatically. Reference ' + order.ref + '.', 'ok');
+        else setNotify('We could not send your order automatically. Please send your file using step 2 so the shop gets your order.', 'bad');
+        if (res.ok && had && res.files && currentChecks && !currentChecks.send) {
+          currentChecks.sentNote = true;
+          var c = $('chk-send'); if (c) { c.checked = true; c.dispatchEvent(new Event('change')); }
+        }
+      });
+    });
+  });
+
+  /* ================= INIT ================= */
+  $('brandName').textContent = SHOP.name;
+  renderServices(); renderPay(); refresh();
+  ['custName', 'custContact'].forEach(function (id) { $(id).addEventListener('input', updateHow); });
+  var saved = loadOrder();
+  if (saved) { flow.printed = true; showSlip(saved.order, saved.checks, true); }
+  updateHow();
+  contactRows($('footRows'));
+  $('footRows').appendChild(el('p', 'paynote', 'Open ' + SHOP.hours + '.'));
+  $('fileSec').hidden = !(SHOP.notify && SHOP.notify.discordUrl);
+  var notes = [];
+  if (SHOP.placeholder) notes.push('GCash, Maya and bank details are still placeholders. Replace them in the SHOP block at the top of the page script.');
+  if (!notifyEnabled()) notes.push('Order alerts are off until you add a Web3Forms key or a Discord webhook in the same block.');
+  if (notes.length) { $('setupNote').textContent = notes.join(' '); $('setupNote').hidden = false; }
+})();
+</script>
+
+</body></html>
